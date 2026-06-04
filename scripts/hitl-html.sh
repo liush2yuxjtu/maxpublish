@@ -15,19 +15,29 @@ from pathlib import Path
 MAXPUBLISH_HOME = os.environ.get("MAXPUBLISH_HOME", str(Path(__file__).resolve().parent.parent))
 SIGNALS = os.path.join(MAXPUBLISH_HOME, "scripts", "signals.sh")
 
-# platform → (envs, token-getting URL)
+# platform → (envs, token-getting URL, brand-color)
 PLATFORMS = {
-    "npm":              (["NODE_AUTH_TOKEN", "NPM_TOKEN"],                                   "https://www.npmjs.com/settings/<user>/tokens (Automation scope)"),
-    "vsce":             (["VSCE_PAT"],                                                         "Azure DevOps → User settings → PAT (Marketplace: Manage)"),
-    "pypi":             (["TWINE_API_KEY", "TWINE_USERNAME", "TWINE_PASSWORD"],               "https://pypi.org/manage/account/token/"),
-    "cargo":            (["CARGO_REGISTRY_TOKEN"],                                             "https://crates.io/settings/tokens"),
-    "gem":              (["GEM_HOST_API_KEY"],                                                 "https://rubygems.org/settings/edit"),
-    "docker":           (["DOCKERHUB_TOKEN"],                                                  "https://hub.docker.com/settings/security"),
-    "ghcr":             (["GITHUB_TOKEN"],                                                     "https://github.com/settings/tokens (write:packages scope)"),
-    "amo":              (["AMO_API_KEY", "AMO_API_SECRET"],                                   "https://addons.mozilla.org/developers/addon/api/key/"),
-    "chrome-web-store": (["CWS_CLIENT_ID", "CWS_CLIENT_SECRET", "CWS_REFRESH_TOKEN"],         "Google Cloud Console + chrome-webstore-upload-cli OAuth"),
-    "edge-addons":      (["EDGE_CLIENT_ID", "EDGE_CLIENT_SECRET"],                             "Partner Center → API credentials"),
-    "brew":             ([],                                                                    "github.com/<user>/homebrew-<formula> (SSH key)"),
+    "npm":              (["NODE_AUTH_TOKEN", "NPM_TOKEN"],                                   "https://www.npmjs.com/settings/<user>/tokens (Automation scope)",     "#cb3837"),
+    "vsce":             (["VSCE_PAT"],                                                         "Azure DevOps → User settings → PAT (Marketplace: Manage)",            "#0078d4"),
+    "pypi":             (["TWINE_API_KEY", "TWINE_USERNAME", "TWINE_PASSWORD"],               "https://pypi.org/manage/account/token/",                                "#3776ab"),
+    "cargo":            (["CARGO_REGISTRY_TOKEN"],                                             "https://crates.io/settings/tokens",                                    "#dea584"),
+    "gem":              (["GEM_HOST_API_KEY"],                                                 "https://rubygems.org/settings/edit",                                    "#cc342d"),
+    "docker":           (["DOCKERHUB_TOKEN"],                                                  "https://hub.docker.com/settings/security",                              "#0db7ed"),
+    "ghcr":             (["GITHUB_TOKEN"],                                                     "https://github.com/settings/tokens (write:packages scope)",            "#2088ff"),
+    "amo":              (["AMO_API_KEY", "AMO_API_SECRET"],                                   "https://addons.mozilla.org/developers/addon/api/key/",                  "#ff7139"),
+    "chrome-web-store": (["CWS_CLIENT_ID", "CWS_CLIENT_SECRET", "CWS_REFRESH_TOKEN"],         "Google Cloud Console + chrome-webstore-upload-cli OAuth",              "#4285f4"),
+    "edge-addons":      (["EDGE_CLIENT_ID", "EDGE_CLIENT_SECRET"],                             "Partner Center → API credentials",                                    "#0078d4"),
+    "brew":             ([],                                                                    "github.com/<user>/homebrew-<formula> (SSH key)",                       "#fbcc0c"),
+    # v0.4.0: 10 NEW platforms
+    "pub":              ([],                                                                    "https://pub.dev/packages/<pkg>/publisher",                              "#0175c2"),
+    "swiftpm":          ([],                                                                    "https://github.com/<owner>/<repo>/releases/new",                       "#f05138"),
+    "maven":            ([],                                                                    "https://central.sonatype.com/publishing",                              "#b41e31"),
+    "packagist":        ([],                                                                    "https://packagist.org/packages/submit",                                "#4f5d95"),
+    "hex":              ([],                                                                    "https://hex.pm/docs/publish",                                          "#a174c0"),
+    "helm":             ([],                                                                    "https://helm.sh/docs/topics/chart_repository/",                       "#0f1689"),
+    "luarocks":         ([],                                                                    "https://luarocks.org/upload/<rockspec>",                               "#1f5b94"),
+    "shards":           ([],                                                                    "https://github.com/<owner>/shards",                                    "#10b981"),
+    "nix-flake":        ([],                                                                    "github.com/<owner>/<repo> (git push to trigger Hydra)",               "#5277c3"),
 }
 
 # platform → which signal type means candidate
@@ -35,13 +45,18 @@ SIG_MAP = {
     "npm": "npm", "vsce": "vscode-extension", "pypi": "pypi", "cargo": "cargo", "gem": "gem",
     "docker": "docker", "ghcr": "ghcr-workflow",
     "amo": "webext-firefox", "chrome-web-store": "webext-chrome", "edge-addons": "webext-edge",
+    # v0.4.0: new sig types
+    "pub": "pub", "swiftpm": "swiftpm", "maven": "maven", "packagist": "packagist",
+    "hex": "hex", "helm": "helm", "luarocks": "luarocks", "shards": "shards",
+    "nix-flake": "nix-flake",
 }
 
 # platforms that need OAuth (skip server/browser open per non-negotiable)
 OAUTH_PLATFORMS = {"amo", "chrome-web-store", "edge-addons"}
 
 # optional extra platforms (not auto-detected)
-EXTRA_PLATFORMS = ["amo", "chrome-web-store", "edge-addons", "brew", "ghcr", "cargo", "gem", "pypi"]
+EXTRA_PLATFORMS = ["amo", "chrome-web-store", "edge-addons", "brew", "ghcr", "cargo", "gem", "pypi",
+                   "pub", "swiftpm", "maven", "packagist", "hex", "helm", "luarocks", "shards", "nix-flake"]
 
 def detect_blockers(sig):
     """Return list of {platform, env, url} for missing creds on candidate platforms."""
@@ -62,6 +77,11 @@ def detect_oauth(sig):
     return [p for p in selected if p in OAUTH_PLATFORMS]
 
 def main():
+    # v0.4.0: try to fill everything before showing blockers
+    fill_script = os.path.join(MAXPUBLISH_HOME, "scripts", "fill-manifest.sh")
+    if os.path.isfile(fill_script) and os.environ.get("MAXPUBLISH_SKIP_FILL") != "1":
+        subprocess.run(["bash", fill_script], check=False, capture_output=True)
+
     sig = json.loads(subprocess.check_output(["bash", SIGNALS, "--json"], text=True))
     cands = sig.get("candidates", [])
     version = sig.get("version", "0.0.0")
@@ -107,7 +127,7 @@ def main():
     # blockers HTML
     if blockers:
         blocker_cards = "\n".join(
-            f'''<div class="card blocker">
+            f'''<div class="card blocker" data-platform="{b["platform"]}">
   <div class="card-head">
     <span class="plat">{b["platform"]}</span>
     <code class="env">{b["env"]}</code>
@@ -199,7 +219,40 @@ def main():
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>maxpublish · {project} v{version}</title>
+<meta name="description" content="publish panel for {project} v{version} — ship to npm, PyPI, crates.io, RubyGems, Docker Hub, GHCR, AMO, Chrome Web Store, Edge Add-ons, Homebrew, GitHub Release, pub.dev, SwiftPM, Maven Central, Packagist, Hex, Helm, luarocks, Shards, Nix flakes in one workflow.">
+<meta name="author" content="maxpublish skill">
+<meta name="theme-color" content="#4f46e5">
+<meta name="robots" content="noindex,nofollow">
+
+<!-- Open Graph -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="maxpublish · {project} v{version}">
+<meta property="og:description" content="one-shot multi-registry publish decision panel — auto-detects project, fills missing fields, surfaces blockers, ships to all selected registries in parallel.">
+<meta property="og:url" content="file://{os.getcwd()}/">
+<meta property="og:site_name" content="maxpublish">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:locale:alternate" content="en_US">
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="maxpublish · {project} v{version}">
+<meta name="twitter:description" content="multi-registry publish in one workflow">
+
+<!-- JSON-LD: SoftwareApplication -->
+<script type="application/ld+json">
+{{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "maxpublish",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "macOS, Linux, Windows",
+  "description": "Agent-driven multi-registry publish with auto-fix helpers. One-shot HITL decision panel. Detects project, fills missing fields, ships to all selected registries in parallel.",
+  "offers": {{"@type":"Offer","price":"0","priceCurrency":"USD"}},
+  "url": "https://github.com/liush2yuxjtu/maxpublish"
+}}
+</script>
 <style>
 :root {{
   --ink:#101418; --muted:#5b6168; --line:#e6e6ea; --line-2:#d4d4d8;
@@ -249,6 +302,26 @@ table.cands input{{transform:scale(1.3);cursor:pointer}}
 .extras input{{margin-right:6px;transform:scale(1.1);cursor:pointer}}
 .card{{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:18px 20px;margin:12px 0;transition:.15s}}
 .card.blocker{{border-left:3px solid var(--err)}}
+.card.blocker[data-platform="npm"]{{border-left-color:#cb3837}}
+.card.blocker[data-platform="vsce"]{{border-left-color:#0078d4}}
+.card.blocker[data-platform="pypi"]{{border-left-color:#3776ab}}
+.card.blocker[data-platform="cargo"]{{border-left-color:#dea584}}
+.card.blocker[data-platform="gem"]{{border-left-color:#cc342d}}
+.card.blocker[data-platform="docker"]{{border-left-color:#0db7ed}}
+.card.blocker[data-platform="ghcr"]{{border-left-color:#2088ff}}
+.card.blocker[data-platform="amo"]{{border-left-color:#ff7139}}
+.card.blocker[data-platform="chrome-web-store"]{{border-left-color:#4285f4}}
+.card.blocker[data-platform="edge-addons"]{{border-left-color:#0078d4}}
+.card.blocker[data-platform="brew"]{{border-left-color:#fbcc0c}}
+.card.blocker[data-platform="pub"]{{border-left-color:#0175c2}}
+.card.blocker[data-platform="swiftpm"]{{border-left-color:#f05138}}
+.card.blocker[data-platform="maven"]{{border-left-color:#b41e31}}
+.card.blocker[data-platform="packagist"]{{border-left-color:#4f5d95}}
+.card.blocker[data-platform="hex"]{{border-left-color:#a174c0}}
+.card.blocker[data-platform="helm"]{{border-left-color:#0f1689}}
+.card.blocker[data-platform="luarocks"]{{border-left-color:#1f5b94}}
+.card.blocker[data-platform="shards"]{{border-left-color:#10b981}}
+.card.blocker[data-platform="nix-flake"]{{border-left-color:#5277c3}}
 .card.oauth{{border-left:3px solid var(--accent);background:var(--accent-soft)}}
 .card-head{{display:flex;align-items:center;gap:10px;margin-bottom:10px}}
 .plat{{font:600 16px/1 var(--serif);color:var(--ink)}}

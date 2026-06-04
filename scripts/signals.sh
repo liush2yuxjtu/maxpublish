@@ -60,6 +60,65 @@ fi
 if has_dir "Formula" && ls Formula/*.rb >/dev/null 2>&1; then
   manifests+=("{\"type\":\"brew-formula\",\"path\":\"Formula/\"}")
 fi
+
+# --- v0.4.0: 10 NEW manifest types ---
+
+# Dart / Flutter → pub.dev
+if has_file "pubspec.yaml"; then
+  v="$(grep -m1 -oE '^version:[[:space:]]*[0-9]+\.[0-9]+[^[:space:]]*' pubspec.yaml | sed -E 's/^version:[[:space:]]*//' || true)"
+  manifests+=("{\"type\":\"pub\",\"path\":\"pubspec.yaml\",\"version\":\"$v\"}")
+fi
+
+# Swift → Swift Package Manager
+if has_file "Package.swift"; then
+  v="$(grep -m1 -oE 'version:[[:space:]]*"[^"]+"' Package.swift | sed -E 's/version:[[:space:]]*"([^"]+)"/\1/' | head -1 || true)"
+  manifests+=("{\"type\":\"swiftpm\",\"path\":\"Package.swift\",\"version\":\"$v\"}")
+fi
+
+# Maven Central (Java/Kotlin)
+if has_file "pom.xml"; then
+  v="$(grep -m1 -oE '<version>[^<]+</version>' pom.xml | head -1 | sed -E 's/<\/?version>//g' || true)"
+  manifests+=("{\"type\":\"maven\",\"path\":\"pom.xml\",\"version\":\"$v\"}")
+elif ls build.gradle* >/dev/null 2>&1; then
+  f="$(ls build.gradle* 2>/dev/null | head -1)"
+  v="$(grep -m1 -oE 'version[[:space:]]*[=:][[:space:]]*["'\'']?[^"'\'' ]+' "$f" 2>/dev/null | sed -E 's/.*["'\'']?([^"'\'']+)["'\'']?.*/\1/' | head -1 || true)"
+  manifests+=("{\"type\":\"maven\",\"path\":\"$f\",\"version\":\"$v\"}")
+fi
+
+# PHP → Packagist
+if has_file "composer.json"; then
+  v="$(jq -r '.version // empty' composer.json 2>/dev/null || true)"
+  manifests+=("{\"type\":\"packagist\",\"path\":\"composer.json\",\"version\":\"$v\"}")
+fi
+
+# Elixir → Hex
+if has_file "mix.exs"; then
+  v="$(grep -m1 -oE 'version:[[:space:]]*"[^"]+"' mix.exs | sed -E 's/version:[[:space:]]*"([^"]+)"/\1/' | head -1 || true)"
+  manifests+=("{\"type\":\"hex\",\"path\":\"mix.exs\",\"version\":\"$v\"}")
+fi
+
+# Helm chart
+if has_file "Chart.yaml"; then
+  v="$(grep -m1 -oE '^version:[[:space:]]*[0-9]+\.[0-9]+[^[:space:]]*' Chart.yaml | sed -E 's/^version:[[:space:]]*//' || true)"
+  manifests+=("{\"type\":\"helm\",\"path\":\"Chart.yaml\",\"version\":\"$v\"}")
+fi
+
+# Lua → luarocks
+if ls *.rockspec >/dev/null 2>&1; then
+  v="$(grep -h -m1 -oE 'version[[:space:]]*=[[:space:]]*["'\''][^"'\'']+' *.rockspec 2>/dev/null | sed -E 's/.*["'\'']([^"'\'']+)["'\''].*/\1/' | head -1 || true)"
+  manifests+=("{\"type\":\"luarocks\",\"path\":\"*.rockspec\",\"version\":\"$v\"}")
+fi
+
+# Crystal → Shards
+if has_file "shard.yml"; then
+  v="$(grep -m1 -oE '^version:[[:space:]]*[0-9]+\.[0-9]+[^[:space:]]*' shard.yml | sed -E 's/^version:[[:space:]]*//' || true)"
+  manifests+=("{\"type\":\"shards\",\"path\":\"shard.yml\",\"version\":\"$v\"}")
+fi
+
+# Nix flake
+if has_file "flake.nix"; then
+  manifests+=("{\"type\":\"nix-flake\",\"path\":\"flake.nix\"}")
+fi
 # WebExtension (manifest.json): AMO if gecko, Chrome Web Store if no gecko,
 # Edge Add-ons if explicit edge key
 if has_file "manifest.json"; then
