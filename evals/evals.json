@@ -1,0 +1,126 @@
+{
+  "skill_name": "maxpublish",
+  "description": "Trigger eval queries for /maxpublish skill. Tests whether Claude recognizes when to consult the skill for multi-registry publish tasks.",
+  "evals": [
+    {
+      "id": 1,
+      "category": "should_trigger",
+      "prompt": "ok so I just merged the v2.0 release branch and I want to ship to npm + github release at the same time. can you walk me through it?",
+      "expected_output": "Claude invokes /maxpublish (or explains it would run signals.sh + hitl-html.sh on the project), identifies npm as a high-confidence auto-default, mentions gh-release as medium-confidence, and surfaces the single-page HITL flow."
+    },
+    {
+      "id": 2,
+      "category": "should_trigger",
+      "prompt": "/maxpublish",
+      "expected_output": "Claude invokes the maxpublish skill explicitly."
+    },
+    {
+      "id": 3,
+      "category": "should_trigger",
+      "prompt": "this is a Python package with a Dockerfile and I want to push it to PyPI and Docker Hub. what's the cleanest way?",
+      "expected_output": "Claude invokes /maxpublish and notes that pypi + docker are both high-confidence auto-defaults based on the manifests, so they'd be auto-published unless the user opts out via the HITL page."
+    },
+    {
+      "id": 4,
+      "category": "should_trigger",
+      "prompt": "I made a VS Code extension. how do I get it on the marketplace? also want it on npm.",
+      "expected_output": "Claude invokes /maxpublish and notes that a package.json with engines.vscode triggers BOTH vsce and npm as high-confidence candidates."
+    },
+    {
+      "id": 5,
+      "category": "should_trigger",
+      "prompt": "发布 win-ontology 0.4 — npm + GitHub release + Docker",
+      "expected_output": "Claude invokes /maxpublish, runs signals.sh --guide, identifies 3 candidates (npm, docker, gh-release), and prepares the HITL page."
+    },
+    {
+      "id": 6,
+      "category": "should_trigger",
+      "prompt": "is this project ready to release? what am I missing?",
+      "expected_output": "Claude invokes /maxpublish --eval to do a release-readiness audit, and points to the DoD in EVAL.md and the blocker detection in hitl-html.sh."
+    },
+    {
+      "id": 7,
+      "category": "should_trigger",
+      "prompt": "I need to push a Firefox extension to AMO. can the skill do that?",
+      "expected_output": "Claude invokes /maxpublish and explains that manifest.json with browser_specific_settings.gecko → AMO (high-confidence), and OAuth dance is required (the skill lists the web-ext CLI but doesn't open a browser itself)."
+    },
+    {
+      "id": 8,
+      "category": "should_trigger",
+      "prompt": "我刚把项目里所有 manifest 都 ready 了，发到所有能发的地方，token 缺哪些我自己去补",
+      "expected_output": "Claude invokes /maxpublish and explains the flow: signals detect candidates → hitl-html.sh opens with blockers + draft + 4 buttons → user fixes tokens in the HTML page → user clicks an action button → copy prompt back to Claude Code → Claude runs the parallel publishes."
+    },
+    {
+      "id": 9,
+      "category": "should_trigger",
+      "prompt": "release v1.2.3 — bump version in all manifests, build, push to PyPI and crates.io",
+      "expected_output": "Claude invokes /maxpublish and notes that fix-version.sh handles the manifest bump, then publishes to pypi + cargo (both high-confidence)."
+    },
+    {
+      "id": 10,
+      "category": "should_trigger",
+      "prompt": "I want to publish my Chrome extension MV3 to Chrome Web Store AND Edge Add-ons. same zip right?",
+      "expected_output": "Claude invokes /maxpublish and explains that manifest.json (MV3, no gecko) → chrome-web-store; manifest.json with edge key → edge-addons. Both high-confidence. Zip can be reused."
+    },
+    {
+      "id": 11,
+      "category": "should_trigger",
+      "prompt": "let's cut a release. npm + GitHub release + the Chrome Web Store. run /maxpublish.",
+      "expected_output": "Claude invokes /maxpublish."
+    },
+    {
+      "id": 12,
+      "category": "should_trigger",
+      "prompt": "I added a new platform to the registry list. how do I extend /maxpublish?",
+      "expected_output": "Claude reads the skill and explains the 5-file change pattern (signals.sh, fix-install.sh, fix-credentials.sh, hitl-html.sh, REFERENCE.md, EVAL.md)."
+    },
+    {
+      "id": 13,
+      "category": "should_NOT_trigger",
+      "prompt": "how do I install npm on my Mac?",
+      "expected_output": "Claude gives a direct answer (brew install node, or nvm). Does NOT invoke /maxpublish — that's for publishing, not installing local tools."
+    },
+    {
+      "id": 14,
+      "category": "should_NOT_trigger",
+      "prompt": "what's the difference between a docker container and a docker image?",
+      "expected_output": "Claude answers the conceptual question. Does NOT invoke /maxpublish — no publish intent."
+    },
+    {
+      "id": 15,
+      "category": "should_NOT_trigger",
+      "prompt": "I'm using GitHub Actions to auto-publish my npm package on every tag. can you help me set up the workflow?",
+      "expected_output": "Claude helps with the CI workflow (actions/setup-node, npm publish with provenance, NODE_AUTH_TOKEN secret). Does NOT invoke /maxpublish — that's for local one-shot publishes; CI is its own beast (release-please, semantic-release, etc.)."
+    },
+    {
+      "id": 16,
+      "category": "should_NOT_trigger",
+      "prompt": "show me the README of this project",
+      "expected_output": "Claude reads the README. Does NOT invoke /maxpublish."
+    },
+    {
+      "id": 17,
+      "category": "should_NOT_trigger",
+      "prompt": "I have a bug where my Chrome extension breaks when I refresh. help me debug it.",
+      "expected_output": "Claude debugs the extension. Does NOT invoke /maxpublish — that's for publishing, not debugging."
+    },
+    {
+      "id": 18,
+      "category": "should_NOT_trigger",
+      "prompt": "what's the best Python web framework?",
+      "expected_output": "Claude answers the question. Does NOT invoke /maxpublish."
+    },
+    {
+      "id": 19,
+      "category": "should_NOT_trigger",
+      "prompt": "can you write a regex that matches emails?",
+      "expected_output": "Claude writes the regex. Does NOT invoke /maxpublish."
+    },
+    {
+      "id": 20,
+      "category": "should_NOT_trigger",
+      "prompt": "I want to add a new page to my docs site. can you help me write the markdown?",
+      "expected_output": "Claude writes the markdown. Does NOT invoke /maxpublish — no publish intent, just content."
+    }
+  ]
+}
