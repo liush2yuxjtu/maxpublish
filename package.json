@@ -1,0 +1,33 @@
+{
+  "name": "claude-maxpublish",
+  "version": "0.1.0",
+  "description": "Agent-driven multi-registry publish with auto-fix helpers (Claude skill).",
+  "type": "commonjs",
+  "main": "scripts/signals.js",
+  "bin": {
+    "maxpublish": "scripts/bin/maxpublish.js"
+  },
+  "files": [
+    "SKILL.md",
+    "REFERENCE.md",
+    "EVAL.md",
+    "scripts/"
+  ],
+  "scripts": {
+    "signals": "./scripts/signals.sh",
+    "self-publish": "echo 'use /maxpublish as a slash command instead' && exit 1"
+  },
+  "keywords": [
+    "claude",
+    "skill",
+    "publish",
+    "npm",
+    "pypi",
+    "docker",
+    "github-release"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  }
+}
